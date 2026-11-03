@@ -9,6 +9,7 @@ src/temp_builds
 
 # Built binary
 src/pikafish*
+src/emscripten
 src/-lstdc++.res
 
 # Neural network for the NNUE evaluation
