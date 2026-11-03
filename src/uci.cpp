@@ -685,3 +685,38 @@ void UCIEngine::terminate_on_critical_error(const std::string& message) {
 }
 
 }  // namespace Stockfish
+
+#if defined(__EMSCRIPTEN__)
+    #include <emscripten.h>
+    #include <memory>
+
+    #include "attacks.h"
+    #include "misc.h"
+    #include "tune.h"
+
+namespace Stockfish {
+
+void UCIEngine::run_command(const std::string& cmd) {
+    char* argv[2] = {const_cast<char*>(""), const_cast<char*>(cmd.c_str())};
+    cli.argc      = 2;
+    cli.argv      = argv;
+    loop();
+}
+
+static std::unique_ptr<UCIEngine> wasmUciEngine = nullptr;
+
+extern "C" EMSCRIPTEN_KEEPALIVE void command(const char* cmd) {
+    if (wasmUciEngine == nullptr)
+    {
+        Attacks::init();
+        Position::init();
+        wasmUciEngine = std::make_unique<UCIEngine>(CommandLine(0, nullptr));
+        Tune::init(wasmUciEngine->engine_options());
+    }
+
+    std::string cmdStr(cmd);
+    wasmUciEngine->run_command(cmdStr);
+}
+
+}  // namespace Stockfish
+#endif

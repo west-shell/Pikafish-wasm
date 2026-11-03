@@ -101,7 +101,9 @@ class Thread {
     std::condition_variable   cv;
     usize                     idx, idxInNuma, totalNuma;
     bool                      exit = false, searching = true;  // Set before starting std::thread
+#if !defined(SINGLE_THREAD)
     NativeThread              stdThread;
+#endif
     NumaReplicatedAccessToken numaAccessToken;
 };
 

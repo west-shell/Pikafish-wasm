@@ -63,7 +63,10 @@ bool write_parameters(std::ostream& stream, const T& reference) {
 }  // namespace Detail
 
 void Network::load(const fs::path& rootDirectory, fs::path evalfilePath, EvalFile& evalFile) {
-#if defined(DEFAULT_NNUE_DIRECTORY)
+#if defined(__EMSCRIPTEN__)
+    // The preloaded .data package mounts files at the FS root.
+    std::vector<fs::path> dirs = {fs::path("/"), fs::path{}, rootDirectory};
+#elif defined(DEFAULT_NNUE_DIRECTORY)
     std::vector<fs::path> dirs = {fs::path{}, rootDirectory,
                                   fs::path(stringify(DEFAULT_NNUE_DIRECTORY))};
 #else
