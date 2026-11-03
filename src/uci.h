@@ -43,6 +43,13 @@ class UCIEngine {
 
     void loop();
 
+#if defined(__EMSCRIPTEN__)
+    // Executes a single UCI command. The search triggered by 'go' runs
+    // synchronously on the caller's stack (single-threaded build), so with
+    // Asyncify it suspends the whole wasm instance until finished or stopped.
+    void run_command(const std::string& cmd);
+#endif
+
     static int         to_cp(Value v, const Position& pos);
     static std::string format_score(const Score& s);
     static std::string square(Square s);

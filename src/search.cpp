@@ -44,6 +44,10 @@
 #include "uci.h"
 #include "ucioption.h"
 
+#if defined(__EMSCRIPTEN__) && defined(SINGLE_THREAD) && defined(ASYNCIFY_BUILD)
+    #include <emscripten.h>
+#endif
+
 namespace Stockfish {
 
 static constexpr std::array<int, 16> lmrDivisor = {3307, 2930, 2874, 2818, 3215, 3225, 3224, 2782,
@@ -1932,6 +1936,18 @@ void SearchManager::check_time(Search::Worker& worker) {
 
     TimePoint elapsed = tm.elapsed([&worker]() { return worker.threads.nodes_searched(); });
     TimePoint tick    = worker.limits.startTime + elapsed;
+
+#if defined(__EMSCRIPTEN__) && defined(SINGLE_THREAD) && defined(ASYNCIFY_BUILD)
+    // Single-threaded Asyncify build: the search runs on the caller's stack, so
+    // the JS event loop is blocked unless we suspend the wasm stack here. Yield
+    // to the event loop roughly every 45ms so 'stop' can re-enter via command().
+    static TimePoint lastYieldTime = now();
+    if (tick - lastYieldTime >= 45)
+    {
+        lastYieldTime = tick;
+        emscripten_sleep(0);
+    }
+#endif
 
     if (tick - lastInfoTime >= 1000)
     {

@@ -53,10 +53,16 @@ Thread::Thread(Search::SharedState&                    sharedState,
     idx(n),
     idxInNuma(numaN),
     totalNuma(totalNumaCount),
-    nthreads(sharedState.options["Threads"]),
-    stdThread(&Thread::idle_loop, this) {
+    nthreads(sharedState.options["Threads"])
+#if !defined(SINGLE_THREAD)
+    ,
+    stdThread(&Thread::idle_loop, this)
+#endif
+{
 
+#if !defined(SINGLE_THREAD)
     wait_for_search_finished();
+#endif
 
     run_custom_job([this, &binder, &sharedState, &sm, n]() {
         // Use the binder to [maybe] bind the threads to a NUMA node before doing
@@ -67,19 +73,22 @@ Thread::Thread(Search::SharedState&                    sharedState,
           sharedState, std::move(sm), n, idxInNuma, totalNuma, this->numaAccessToken);
     });
 
+#if !defined(SINGLE_THREAD)
     wait_for_search_finished();
+#endif
 }
 
 
 // Destructor wakes up the thread in idle_loop() and waits
 // for its termination. Thread should be already waiting.
 Thread::~Thread() {
-
+#if !defined(SINGLE_THREAD)
     assert(!searching);
 
     exit = true;
     start_searching();
     stdThread.join();
+#endif
 }
 
 // Wakes up the thread that will start the search
@@ -96,6 +105,9 @@ void Thread::clear_worker() {
 
 // Blocks on the condition variable until the thread has finished searching
 void Thread::wait_for_search_finished() {
+#if defined(SINGLE_THREAD)
+    return;
+#endif
 
     std::unique_lock<std::mutex> lk(mutex);
     cv.wait(lk, [&] { return !searching; });
@@ -103,6 +115,10 @@ void Thread::wait_for_search_finished() {
 
 // Launching a function in the thread
 void Thread::run_custom_job(std::function<void()> f) {
+#if defined(SINGLE_THREAD)
+    f();
+    return;
+#endif
     {
         std::unique_lock<std::mutex> lk(mutex);
         cv.wait(lk, [&] { return !searching; });
@@ -160,7 +176,11 @@ void ThreadPool::set(const NumaConfig&                           numaConfig,
         boundThreadToNumaNode.clear();
     }
 
-    const usize requested = sharedState.options["Threads"];
+    usize requested = sharedState.options["Threads"];
+#if defined(SINGLE_THREAD)
+    // A single-threaded build always runs everything on the caller's stack.
+    requested = std::min(requested, usize(1));
+#endif
 
     if (requested > 0)  // create new thread(s)
     {
