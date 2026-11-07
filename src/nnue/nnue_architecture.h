@@ -40,7 +40,7 @@ using ThreatFeatureSet = Features::FullThreats;
 using PSQFeatureSet    = Features::K6R2NC2;
 
 // Number of input feature dimensions after conversion
-constexpr IndexType L1 = 1024;
+constexpr IndexType L1 = 256;
 constexpr int       L2 = 32;
 constexpr int       L3 = 32;
 
