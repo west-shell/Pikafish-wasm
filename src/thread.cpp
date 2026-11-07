@@ -53,7 +53,7 @@ Thread::Thread(Search::SharedState&                   sharedState,
                OptionalThreadToNumaNodeBinder         binder) :
     idx(n),
     idxInNuma(numaN),
-    totalNuma(totalNumaCount),
+    totalNuma(totalNumaCount)
 #if !defined(SINGLE_THREAD)
     ,
     stdThread(
